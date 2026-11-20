@@ -13,10 +13,10 @@ Origin: the Allium ↔ Gherkin traceability gate of `Chili-Piper/edge-fire-servi
 
 | Module            | Depends on                 | Contents                                                            |
 |-------------------|----------------------------|---------------------------------------------------------------------|
-| `allium-model`    | –                          | Case classes only: `Obligation`, `Plan`, `Diagnostic`, `Outline`, … |
-| `allium-circe`    | model, circe-core/jawn     | Decoders for `allium plan/parse/check` JSON                         |
+| `allium-model`    | –                          | Case classes only: `Obligation`, `Plan`, `Outline`, data file entries |
+| `allium-circe`    | model, circe-core/jawn     | Decoders for `allium plan/parse/check` JSON and the data files      |
 | `allium-cli`      | – (JDK only)               | Download + SHA-256 check + run the CLI                              |
-| `allium-coverage` | model                      | Pure reconciliation engine and the data file parsers                |
+| `allium-coverage` | model                      | Pure reconciliation engine                                          |
 | `allium-gherkin`  | coverage, io.cucumber:gherkin | Feature parsing, `@obligation:` tags, skip-tag policy           |
 | `allium-lint`     | model, circe               | Undeclared `alias/config.param`; fatal warning codes                |
 | `examples`        | all (not published)        | The README example, end to end, on a fixture repository             |
@@ -28,9 +28,9 @@ calling `allium-cli` from the test itself.
 
 | Item from edge-fire                                    | Decision                                                             |
 |--------------------------------------------------------|----------------------------------------------------------------------|
-| `@obligation:<id>` coverage, `out-of-scope.txt`, `superseded.txt` | Library (`allium-coverage`, `allium-gherkin`)              |
+| `@obligation:<id>` coverage, `out-of-scope.json`, `superseded.json` | Library (`allium-coverage`, `allium-gherkin`)              |
 | `undeclaredConfigReferences` (CLI gap)                 | Library (`allium-lint`); reported upstream: https://github.com/juxt/allium-tools/issues/135 |
-| `-- @superseded` markers read from source              | Library, pluggable `SupersededMarker`; default = edge-fire's convention |
+| `-- @superseded` markers read from source              | Dropped: `superseded.json` is the only record; no source scanning  |
 | Section headings (`-- ── X ──` banners)                | Dropped: only the naming layer used them                             |
 | Scenario/Feature naming layer (`rule X — …`, `specs/X.allium § S`) | Dropped from the library; to be removed from edge-fire too (`@obligation` tags cover it) |
 | Skip-tag ban (`@wip`, `@ignore`, …)                    | Library, configurable (`GherkinCoverage.skippedScenarios`)           |

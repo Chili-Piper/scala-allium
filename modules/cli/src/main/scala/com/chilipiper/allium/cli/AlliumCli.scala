@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.{Files, Path, StandardCopyOption}
 import java.security.MessageDigest
-import java.util.zip.GZIPInputStream
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
@@ -102,28 +101,52 @@ object AlliumCli {
       if (actual != expectedSha256)
         Left(s"allium: $url has SHA-256 $actual, expected $expectedSha256")
       else
-        Tar.extract(new GZIPInputStream(new java.io.ByteArrayInputStream(archive)), "allium").map { bytes =>
-          Files.createDirectories(bin.getParent)
-          val tmp = Files.createTempFile(bin.getParent, "allium", ".tmp")
-          Files.write(tmp, bytes)
-          Files.setPosixFilePermissions(
-            tmp,
-            Set(
-              PosixFilePermission.OWNER_READ,
-              PosixFilePermission.OWNER_WRITE,
-              PosixFilePermission.OWNER_EXECUTE,
-              PosixFilePermission.GROUP_READ,
-              PosixFilePermission.GROUP_EXECUTE,
-              PosixFilePermission.OTHERS_READ,
-              PosixFilePermission.OTHERS_EXECUTE,
-            ).asJava,
-          )
-          Files.move(tmp, bin, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-          ()
-        }
+        install(archive, bin).left.map(e => s"allium: $url: $e")
     } catch {
       case NonFatal(e) => Left(s"allium: cannot download $url: $e")
     }
+
+  /** Unpacks the `allium` binary of a `.tar.gz` release archive to `bin` with the system `tar`. */
+  private[cli] def install(archive: Array[Byte], bin: Path): Either[String, Unit] = {
+    Files.createDirectories(bin.getParent)
+    val work = Files.createTempDirectory(bin.getParent, "allium-unpack")
+    try {
+      val file = work.resolve("allium.tar.gz")
+      Files.write(file, archive)
+      val process = new ProcessBuilder("tar", "-xzf", file.toString, "-C", work.toString)
+        .redirectErrorStream(true)
+        .start()
+      process.getOutputStream.close()
+      val output = new String(process.getInputStream.readAllBytes(), UTF_8)
+      val extracted = work.resolve("allium")
+      if (process.waitFor() != 0)
+        Left(s"tar cannot unpack the archive: $output")
+      else if (!Files.isRegularFile(extracted))
+        Left("no allium in the archive")
+      else {
+        Files.setPosixFilePermissions(
+          extracted,
+          Set(
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE,
+            PosixFilePermission.GROUP_READ,
+            PosixFilePermission.GROUP_EXECUTE,
+            PosixFilePermission.OTHERS_READ,
+            PosixFilePermission.OTHERS_EXECUTE,
+          ).asJava,
+        )
+        Files.move(extracted, bin, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        Right(())
+      }
+    } finally deleteTree(work)
+  }
+
+  private def deleteTree(dir: Path): Unit = {
+    val paths = Files.walk(dir)
+    try paths.iterator.asScala.toList.reverse.foreach(Files.deleteIfExists(_))
+    finally paths.close()
+  }
 
   private def readAll(in: InputStream): Array[Byte] =
     try in.readAllBytes()

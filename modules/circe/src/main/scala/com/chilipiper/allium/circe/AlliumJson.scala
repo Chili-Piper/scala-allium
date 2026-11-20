@@ -1,6 +1,6 @@
 package com.chilipiper.allium.circe
 
-import com.chilipiper.allium.model.{CheckReport, Outline, Plan}
+import com.chilipiper.allium.model.{CheckReport, OutOfScope, Outline, Plan, Supersession}
 import io.circe.jawn.CirceSupportParser
 import io.circe.{Decoder, Json}
 import org.typelevel.jawn.AsyncParser
@@ -33,6 +33,14 @@ object AlliumJson {
 
   /** The stdout of `allium parse <spec>`. */
   def outline(text: String): Either[String, Outline] = single(text).flatMap(decode[Outline])
+
+  /** An out-of-scope file: a JSON array of entries (see [[DataFileCodecs]]). */
+  def outOfScope(text: String): Either[String, List[OutOfScope]] =
+    single(text).flatMap(decode[List[OutOfScope]](_)(Decoder.decodeList(DataFileCodecs.outOfScopeDecoder)))
+
+  /** A superseded file: a JSON array of entries (see [[DataFileCodecs]]). */
+  def superseded(text: String): Either[String, List[Supersession]] =
+    single(text).flatMap(decode[List[Supersession]](_)(Decoder.decodeList(DataFileCodecs.supersessionDecoder)))
 
   /** The stdout of `allium check <dir>`. */
   def check(text: String): Either[String, List[CheckReport]] =

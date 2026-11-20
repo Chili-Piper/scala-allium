@@ -22,37 +22,27 @@ class ObligationCoverageSuite extends munit.FunSuite {
   private lazy val specs: List[Path] =
     Files.list(root.resolve("specs")).iterator.asScala.filter(_.toString.endsWith(".allium")).toList.sorted
 
-  private def lines(file: String): List[String] = {
+  /** A data file that does not exist has no entries. */
+  private def data[A](file: String)(decode: String => Either[String, List[A]]): List[A] = {
     val p = root.resolve(file)
-    if (Files.exists(p)) Files.readAllLines(p).asScala.toList else Nil
+    if (Files.exists(p)) decode(Files.readString(p)).fold(e => fail(s"$file: $e"), identity) else Nil
   }
 
   private def gate(tagFilter: Tag => Boolean): (Reconciliation, List[String]) = {
-    val inputs = specs.map { p =>
-      val rel = root.relativize(p).toString
+    val plans = specs.map { p =>
       val name = SpecName(p.getFileName.toString.stripSuffix(".allium"))
-      val source = Files.readAllBytes(p)
-      val plan = cli.plan(root, rel).flatMap(AlliumJson.plan).fold(e => fail(e), identity)
-      val outline = cli.parse(root, rel).flatMap(AlliumJson.outline).fold(e => fail(e), identity)
-      (
-        SpecPlan(name, plan, source),
-        SupersededMarker.commentLine.superseded(source, outline).map(ConstructRef(name, _)),
-      )
+      SpecPlan(name, cli.plan(root, root.relativize(p).toString).flatMap(AlliumJson.plan).fold(e => fail(e), identity))
     }
     val features = Feature.readAll(root.resolve("features"), root)
-    val (outOfScope, p1) =
-      DataFiles.parseOutOfScope(Layout.default.outOfScopeFile, lines(Layout.default.outOfScopeFile))
-    val (superseded, p2) =
-      DataFiles.parseSuperseded(Layout.default.supersededFile, lines(Layout.default.supersededFile))
+    val outOfScope = data(Layout.default.outOfScopeFile)(AlliumJson.outOfScope)
+    val superseded = data(Layout.default.supersededFile)(AlliumJson.superseded)
     val result = Coverage.reconcile(
-      inputs.map(_._1),
+      plans,
       GherkinCoverage.tags(features).filter(tagFilter),
       outOfScope,
       superseded,
-      inputs.flatMap(_._2).toSet,
     )
-    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ p1 ++ p2 ++
-      result.problems
+    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ result.problems
     (result, problems)
   }
 

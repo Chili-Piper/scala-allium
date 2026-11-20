@@ -10,7 +10,6 @@ entity Order {
 }
 
 rule PlaceOrder {
-    -- @superseded by 002-orders-v2/PlaceOrderChecked
     when: Place(order)
     requires: order.status = open
     ensures: order.status = placed
