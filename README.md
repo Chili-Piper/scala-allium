@@ -1,0 +1,138 @@
+# scala-allium
+
+Scala tools for [Allium](https://github.com/juxt/allium-tools) specifications. The main use: a test that fails when
+an obligation of `allium plan` has no test that covers it.
+
+Cross-built for Scala 2.13 and 3.
+
+## Modules
+
+| Module            | Depends on          | What it does                                                                          |
+|-------------------|---------------------|---------------------------------------------------------------------------------------|
+| `allium-model`    | –                   | Data types: `Obligation`, `Plan`, `Diagnostic`, `CheckReport`, `Outline`              |
+| `allium-circe`    | model, circe        | Decodes the JSON of `allium plan`, `allium parse` and `allium check`                  |
+| `allium-cli`      | –                   | Downloads a pinned CLI release (SHA-256 verified) and runs it                         |
+| `allium-coverage` | model               | Reconciles obligations with test tags. Pure, no I/O                                   |
+| `allium-gherkin`  | coverage, gherkin   | Reads `@obligation:<id>` tags from `.feature` files; bans skip tags                   |
+| `allium-lint`     | model, circe        | Checks the CLI does not make yet: undeclared `alias/config.param`, fatal warning codes |
+
+```scala
+libraryDependencies ++= List(
+  "com.chilipiper" %% "allium-cli" % version,
+  "com.chilipiper" %% "allium-circe" % version,
+  "com.chilipiper" %% "allium-gherkin" % version, // brings allium-coverage and allium-model
+  "com.chilipiper" %% "allium-lint" % version,
+).map(_ % Test)
+```
+
+## The coverage gate
+
+Each obligation ends in exactly one status:
+
+- **covered**: a test of its spec carries the tag `@obligation:<id>`;
+- **superseded**: its construct is listed in `specs/plan/superseded.txt`;
+- **out of scope**: it is listed in `specs/plan/out-of-scope.txt`;
+- **missing**: none of the above. This is a problem.
+
+A tag that names no obligation, and a stale entry in a data file, are problems too.
+
+### Example (munit)
+
+A tested version of this example, with a fixture repository, is
+[`ObligationCoverageSuite`](modules/examples/src/test/scala/com/chilipiper/allium/examples/ObligationCoverageSuite.scala).
+
+```scala
+import java.nio.file.{Files, Path, Paths}
+import scala.jdk.CollectionConverters.*
+
+import com.chilipiper.allium.circe.AlliumJson
+import com.chilipiper.allium.cli.{AlliumCli, Release}
+import com.chilipiper.allium.coverage.*
+import com.chilipiper.allium.gherkin.{Feature, GherkinCoverage}
+import com.chilipiper.allium.model.SpecName
+
+class ObligationCoverageSuite extends munit.FunSuite {
+  test("every obligation is covered") {
+    val root = Paths.get(".").toAbsolutePath.normalize
+    val cli = AlliumCli.download(Release.latest, root.resolve("target/allium-cli")).fold(fail(_), identity)
+    val specs = Files.list(root.resolve("specs")).iterator.asScala.filter(_.toString.endsWith(".allium")).toList.sorted
+
+    val inputs = specs.map { p =>
+      val rel = root.relativize(p).toString
+      val name = SpecName(p.getFileName.toString.stripSuffix(".allium"))
+      val source = Files.readAllBytes(p)
+      val plan = cli.plan(root, rel).flatMap(AlliumJson.plan).fold(fail(_), identity)
+      val outline = cli.parse(root, rel).flatMap(AlliumJson.outline).fold(fail(_), identity)
+      (SpecPlan(name, plan, source), SupersededMarker.commentLine.superseded(source, outline).map(ConstructRef(name, _)))
+    }
+
+    val features = Feature.readAll(root.resolve("features"), root)
+    def lines(f: String) = Option(root.resolve(f)).filter(Files.exists(_)).toList.flatMap(Files.readAllLines(_).asScala)
+    val (outOfScope, p1) = DataFiles.parseOutOfScope(Layout.default.outOfScopeFile, lines(Layout.default.outOfScopeFile))
+    val (superseded, p2) = DataFiles.parseSuperseded(Layout.default.supersededFile, lines(Layout.default.supersededFile))
+
+    val result = Coverage.reconcile(
+      inputs.map(_._1),
+      GherkinCoverage.tags(features),
+      outOfScope,
+      superseded,
+      inputs.flatMap(_._2).toSet,
+    )
+    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ p1 ++ p2 ++
+      result.problems
+    assert(problems.isEmpty, (problems ++ result.reports.map(_.line) :+ result.totalLine).mkString("\n"))
+  }
+}
+```
+
+### Data files
+
+`specs/plan/out-of-scope.txt`, one entry per line, `#` starts a comment:
+
+```
+<spec|*>  <obligation id | category:<kind>>  <reason>
+001-auth  value-equality.Token               Scala case class: equality is structural
+*         category:surface-exposure          no UI
+```
+
+`*` (every spec) is allowed only with a category. `<kind>` is the id up to its first dot.
+
+`specs/plan/superseded.txt`: a construct, then the rules of later specs that supersede it.
+
+```
+<spec>/<Construct>  <later spec>/<Rule> [<later spec>/<Rule>…]
+001-auth/Refresh    004-auth-v2/RefreshRotating
+```
+
+A construct listed here must be marked superseded in its spec. With `SupersededMarker.commentLine`, the marker is a
+block-level comment line `    -- @superseded …` (4 spaces), or an `@invariant` whose comment body starts with
+`@superseded`. Use `SupersededMarker.lines(...)` for another convention, or `SupersededMarker.none`.
+
+### Settings
+
+`Coverage.reconcile` takes `Settings`:
+
+- `layout`: the paths in messages (spec files, test directories, data files);
+- `specOrder`: which specs are "later" (default: by the number the spec name starts with, `002-x` after `001-y`);
+- `tagPrefix`: default `@obligation:`.
+
+## Allium CLI
+
+`AlliumCli.download(Release.latest, cacheDir)` downloads the release for this machine (Linux and macOS, x86_64 and
+arm64) and checks its SHA-256. `juxt/allium-tools` publishes no checksums, so `Release` pins them. For another version,
+pass your own `Release(version, checksums)`. `AlliumCli.at(path)` uses a binary you already have.
+
+The CLI exits non-zero on warnings and on error diagnostics, and still prints its JSON report. So only an empty stdout
+is an error.
+
+## Development
+
+```
+./sbt ci
+```
+
+The tests of `allium-cli`, `allium-circe` and `allium-lint` download the pinned CLI into `target/allium-cli`.
+
+## Publishing
+
+`sbt-ci-release` publishes to Maven Central on a `v*` tag. Do not push a tag while the repository is private.

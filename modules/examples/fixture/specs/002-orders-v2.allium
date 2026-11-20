@@ -1,0 +1,9 @@
+-- allium: 3
+use "./001-orders.allium" as v1
+
+rule PlaceOrderChecked {
+    when: Place(order)
+    requires: order.status = open
+    requires: order.items <= v1/config.max_items
+    ensures: order.status = placed
+}

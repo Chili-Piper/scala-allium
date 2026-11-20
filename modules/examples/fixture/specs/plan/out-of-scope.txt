@@ -1,0 +1,3 @@
+# <spec|*>  <obligation id | category:<kind>>  <reason>
+001-orders  entity-fields.Order    the Scala case class has these fields by construction
+*           category:config-default  defaults are read from configuration, not tested

@@ -1,0 +1,23 @@
+-- allium: 3
+
+config {
+    max_items: Integer = 10
+}
+
+entity Order {
+    items: Integer
+    status: open | placed
+}
+
+rule PlaceOrder {
+    -- @superseded by 002-orders-v2/PlaceOrderChecked
+    when: Place(order)
+    requires: order.status = open
+    ensures: order.status = placed
+}
+
+rule CancelOrder {
+    when: Cancel(order)
+    requires: order.status = open
+    ensures: order.removed()
+}

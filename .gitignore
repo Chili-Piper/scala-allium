@@ -1,0 +1,15 @@
+target
+.idea
+.vscode
+.metals
+.bloop
+metals.sbt
+idea-bloop.sbt
+.theia
+.bsp
+.DS_Store
+.scala-build
+*.iml
+*.ipr
+*.iws
+local.sbt
