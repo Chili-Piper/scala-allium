@@ -1,8 +1,8 @@
 package com.chilipiper.allium.cli
 
-import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets.US_ASCII
 import java.nio.file.Files
+import scala.jdk.CollectionConverters._
 
 class AlliumCliSuite extends munit.FunSuite {
 
@@ -20,26 +20,33 @@ class AlliumCliSuite extends munit.FunSuite {
     assertEquals(Release("3.6.1"), Some(Release.v3_6_1))
   }
 
-  private def tarEntry(name: String, data: Array[Byte]): Array[Byte] = {
-    val header = new Array[Byte](512)
-    def put(offset: Int, s: String): Unit = {
-      val _ = s.getBytes(US_ASCII).copyToArray(header, offset)
-    }
-    put(0, name)
-    put(124, f"${data.length.toOctalString}%11s".replace(' ', '0'))
-    header(156) = '0'.toByte
-    val padding = new Array[Byte]((512 - data.length % 512) % 512)
-    header ++ data ++ padding
+  /** A `.tar.gz` made by the system `tar` from `files`, as a release archive is. */
+  private def archive(files: (String, String)*): Array[Byte] = {
+    val dir = Files.createTempDirectory("allium-archive")
+    files.foreach { case (name, text) => Files.writeString(dir.resolve(name), text) }
+    val out = dir.resolve("out.tar.gz")
+    val p =
+      new ProcessBuilder(("tar" :: "-czf" :: out.toString :: "-C" :: dir.toString :: files.map(_._1).toList).asJava)
+        .inheritIO()
+        .start()
+    assertEquals(p.waitFor(), 0)
+    Files.readAllBytes(out)
   }
 
-  test("a file is taken out of a tar archive, skipping the entries before it") {
-    val archive = tarEntry("README", "hello".getBytes(US_ASCII)) ++ tarEntry("./allium", "binary".getBytes(US_ASCII)) ++
-      new Array[Byte](1024)
-    assertEquals(
-      Tar.extract(new ByteArrayInputStream(archive), "allium").map(new String(_, US_ASCII)),
-      Right("binary"),
-    )
-    assert(Tar.extract(new ByteArrayInputStream(new Array[Byte](1024)), "allium").isLeft)
+  test("the binary is taken out of a release archive and made executable") {
+    val bin = Files.createTempDirectory("allium-cli").resolve("3.0.0/allium")
+    assertEquals(AlliumCli.install(archive("README" -> "hello", "allium" -> "binary"), bin), Right(()))
+    assertEquals(Files.readString(bin), "binary")
+    assert(Files.isExecutable(bin))
+    assertEquals(Files.list(bin.getParent).count(), 1L)
+  }
+
+  test("an archive without the binary, or not an archive, leaves no binary") {
+    val bin = Files.createTempDirectory("allium-cli").resolve("3.0.0/allium")
+    assertEquals(AlliumCli.install(archive("README" -> "hello"), bin), Left("no allium in the archive"))
+    assert(AlliumCli.install("not a tar".getBytes(US_ASCII), bin).left.exists(_.startsWith("tar cannot unpack")))
+    assert(!Files.exists(bin))
+    assertEquals(Files.list(bin.getParent).count(), 0L)
   }
 
   test("a download with the wrong checksum is refused and leaves no binary") {
