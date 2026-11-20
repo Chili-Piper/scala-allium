@@ -30,7 +30,7 @@ calling `allium-cli` from the test itself.
 |--------------------------------------------------------|----------------------------------------------------------------------|
 | `@obligation:<id>` coverage, `out-of-scope.json`, `superseded.json` | Library (`allium-coverage`, `allium-gherkin`)              |
 | `undeclaredConfigReferences` (CLI gap)                 | Library (`allium-lint`); reported upstream: https://github.com/juxt/allium-tools/issues/135 |
-| `-- @superseded` markers read from source              | Library, pluggable `SupersededMarker`; default = edge-fire's convention |
+| `-- @superseded` markers read from source              | Dropped: `superseded.json` is the only record; no source scanning  |
 | Section headings (`-- ── X ──` banners)                | Dropped: only the naming layer used them                             |
 | Scenario/Feature naming layer (`rule X — …`, `specs/X.allium § S`) | Dropped from the library; to be removed from edge-fire too (`@obligation` tags cover it) |
 | Skip-tag ban (`@wip`, `@ignore`, …)                    | Library, configurable (`GherkinCoverage.skippedScenarios`)           |

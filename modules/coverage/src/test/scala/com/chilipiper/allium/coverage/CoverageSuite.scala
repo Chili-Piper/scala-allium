@@ -2,8 +2,6 @@ package com.chilipiper.allium.coverage
 
 import com.chilipiper.allium.model._
 
-import java.nio.charset.StandardCharsets.UTF_8
-
 class CoverageSuite extends munit.FunSuite {
 
   private def ob(id: String, construct: String): Obligation =
@@ -40,9 +38,8 @@ class CoverageSuite extends munit.FunSuite {
       tags: List[Tag],
       outOfScope: List[OutOfScope] = Nil,
       superseded: List[Supersession] = List(oldByB),
-      supersededInSpecs: Set[ConstructRef] = Set(ref(A, "Old")),
       plans: List[SpecPlan] = List(a, b),
-  ): Reconciliation = Coverage.reconcile(plans, tags, outOfScope, superseded, supersededInSpecs)
+  ): Reconciliation = Coverage.reconcile(plans, tags, outOfScope, superseded)
 
   private val allTagged =
     List(
@@ -75,24 +72,25 @@ class CoverageSuite extends munit.FunSuite {
     )
   }
 
-  test("an untagged in-scope obligation is missing, with the spec snippet in the message") {
-    val source = "rule R {\n    requires: x != null -- not null\n}\n".getBytes(UTF_8)
-    val withSpan = a.copy(
-      plan = a.plan.copy(obligations = a.plan.obligations.map {
-        case o if o.id.value == "rule-failure.R.1" => o.copy(span = Some(Span(13, 44)))
-        case o                                     => o
-      }),
-      source = source,
-    )
-    val r = run(tags = allTagged.filterNot(_.id.value == "rule-failure.R.1"), plans = List(withSpan, b))
+  test("an untagged in-scope obligation is missing, with the expression it tests in the message") {
+    val withExpression = a.copy(plan = a.plan.copy(obligations = a.plan.obligations.map {
+      case o if o.id.value == "rule-failure.R.1" => o.copy(expression = Some("x != null"))
+      case o                                     => o
+    }))
+    val r = run(tags = allTagged.filterNot(_.id.value == "rule-failure.R.1"), plans = List(withExpression, b))
     assertEquals(statusOf(r, A, "rule-failure.R.1"), Status.Missing)
     assertEquals(
       r.problems,
       List(
-        "specs/001-a.allium: rule-failure.R.1 — verify rule-failure.R.1 [requires: x != null]: " +
+        "specs/001-a.allium: rule-failure.R.1 — verify rule-failure.R.1 [x != null]: " +
           "no test in features/001-a/ carries @obligation:rule-failure.R.1",
       ),
     )
+  }
+
+  test("a long expression is shortened in the message") {
+    val shown = SpecPlan(A, Plan(Nil, Nil)).show(ob("rule-failure.R.1", "R").copy(expression = Some("x" * 200)))
+    assertEquals(shown, "rule-failure.R.1 — verify rule-failure.R.1 [" + "x" * 159 + "…]")
   }
 
   test("a tag of another spec does not cover the obligation") {
@@ -164,16 +162,9 @@ class CoverageSuite extends munit.FunSuite {
     assert(r.problems.exists(_.contains("out-of-scope.json: 009-z/category:value-equality: there is no spec")))
   }
 
-  test("the superseded mapping must match the markers and name later, live rules") {
+  test("a superseded entry names a construct with obligations and later, live rules") {
     val unmapped = run(tags = allTagged, superseded = Nil)
     assertEquals(statusOf(unmapped, A, "rule-failure.Old.1"), Status.Missing)
-    assert(unmapped.problems.exists(_.contains("Old is marked superseded: add an entry for 001-a/Old")))
-
-    val unmarked = run(tags = allTagged, supersededInSpecs = Set.empty)
-    assertEquals(
-      unmarked.problems,
-      List("specs/plan/superseded.json: 001-a/Old: Old is not marked superseded in specs/001-a.allium"),
-    )
 
     val p = run(
       tags = allTagged,
@@ -182,7 +173,6 @@ class CoverageSuite extends munit.FunSuite {
         Supersession(ref(B, "New"), List(ref(SpecName("003-c"), "Newer"))),
         Supersession(ref(A, "Gone"), List(ref(B, "New"))),
       ),
-      supersededInSpecs = Set(ref(A, "Old"), ref(B, "New"), ref(A, "Gone")),
     ).problems
     assert(p.exists(_.contains("superseded.json: 001-a/Old: 002-b/Nope is not a rule of specs/002-b.allium")), p)
     assert(
@@ -205,7 +195,6 @@ class CoverageSuite extends munit.FunSuite {
       Nil,
       Nil,
       Nil,
-      Set.empty,
       settings,
     )
     assertEquals(

@@ -48,7 +48,8 @@ object AlliumCodecs {
         construct <- c.get[String]("source_construct")
         description <- c.get[String]("description")
         span <- c.downField("source_span").success.fold[Decoder.Result[Option[Span]]](Right(None))(optionalSpan(_))
-      } yield Obligation(id, category, construct, description, span)
+        expression <- c.get[Option[String]]("expression")
+      } yield Obligation(id, category, construct, description, span, expression)
 
   private def diagnostics(c: HCursor): Decoder.Result[List[Diagnostic]] =
     c.get[Option[List[Diagnostic]]]("diagnostics").map(_.getOrElse(Nil))

@@ -10,15 +10,11 @@ import com.chilipiper.allium.model._
   */
 object Coverage {
 
-  /** @param supersededInSpecs
-    *   every construct a spec marks as superseded (see [[SupersededMarker]])
-    */
   def reconcile(
       plans: List[SpecPlan],
       tags: List[Tag],
       outOfScope: List[OutOfScope],
       superseded: List[Supersession],
-      supersededInSpecs: Set[ConstructRef],
       settings: Settings = Settings.default,
   ): Reconciliation = {
     val layout = settings.layout
@@ -75,8 +71,6 @@ object Coverage {
             List(s"$where: there is no spec ${layout.specFile(c.spec)}")
           else if (!planOf(c.spec).constructs.contains(c.construct))
             List(s"$where: ${layout.specFile(c.spec)} has no obligations for ${c.construct}: remove the stale entry")
-          else if (!supersededInSpecs.contains(c))
-            List(s"$where: ${c.construct} is not marked superseded in ${layout.specFile(c.spec)}")
           else
             Nil
         val successors = s.by.flatMap { b =>
@@ -90,12 +84,7 @@ object Coverage {
             Nil
         }
         key ++ successors
-      } ++
-        supersededInSpecs.toList.sorted.collect {
-          case c if planOf.get(c.spec).exists(_.constructs.contains(c.construct)) && !supersededBy.contains(c) =>
-            s"${layout.specFile(c.spec)}: ${c.construct} is marked superseded: add an entry for ${c.show} " +
-              s"to ${layout.supersededFile}"
-        }
+      }
 
     val reports = plans.sortBy(_.spec).map { plan =>
       SpecReport(

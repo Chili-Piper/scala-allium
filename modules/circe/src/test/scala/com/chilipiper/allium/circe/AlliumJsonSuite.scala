@@ -1,7 +1,6 @@
 package com.chilipiper.allium.circe
 
 import com.chilipiper.allium.cli.TestCli
-import com.chilipiper.allium.coverage.SupersededMarker
 import com.chilipiper.allium.model._
 
 import java.nio.charset.StandardCharsets.UTF_8
@@ -79,11 +78,8 @@ class AlliumJsonSuite extends munit.FunSuite {
       ),
     )
     val later = o.declarations.find(_.name.contains("Later")).get
-    assert(SourceText.of(spec.getBytes(UTF_8), later.span).exists(_.startsWith("rule Later {")))
-  }
-
-  test("the comment-line marker finds superseded rules and invariants, not superseded branches") {
-    assertEquals(SupersededMarker.commentLine.superseded(spec.getBytes(UTF_8), outline(spec)), Set("OldHash", "Later"))
+    val bytes = spec.getBytes(UTF_8)
+    assert(new String(bytes.slice(later.span.start, later.span.end), UTF_8).startsWith("rule Later {"))
   }
 
   test("`allium parse` of a broken spec decodes with its error diagnostic") {
@@ -100,6 +96,10 @@ class AlliumJsonSuite extends munit.FunSuite {
     assert(later.exists(_.id == ObligationId("rule-success.Later")), later)
     assert(later.exists(_.kind == "rule-failure"), later)
     assert(later.forall(_.span.isDefined))
+    assertEquals(
+      later.find(_.id == ObligationId("rule-failure.Later.1")).flatMap(_.expression),
+      Some("t.name != \"x\""),
+    )
     assertEquals(plan.obligations.map(_.id).distinct.size, plan.obligations.size)
   }
 

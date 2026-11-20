@@ -19,6 +19,9 @@ object ObligationId {
   *   as printed by the CLI, for example `rule_failure`
   * @param construct
   *   the spec construct the obligation comes from (`source_construct`), for example a rule name
+  * @param expression
+  *   the text the obligation tests, without comments, for example the `requires` clause of a `rule-failure` obligation;
+  *   only some obligations have one, and only from CLI 3.7.0
   */
 final case class Obligation(
     id: ObligationId,
@@ -26,6 +29,7 @@ final case class Obligation(
     construct: String,
     description: String,
     span: Option[Span],
+    expression: Option[String] = None,
 ) {
   def kind: String = id.kind
 }

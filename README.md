@@ -49,7 +49,7 @@ import com.chilipiper.allium.circe.AlliumJson
 import com.chilipiper.allium.cli.{AlliumCli, Release}
 import com.chilipiper.allium.coverage.*
 import com.chilipiper.allium.gherkin.{Feature, GherkinCoverage}
-import com.chilipiper.allium.model.{ConstructRef, SpecName}
+import com.chilipiper.allium.model.SpecName
 
 class ObligationCoverageSuite extends munit.FunSuite {
   test("every obligation is covered") {
@@ -57,13 +57,9 @@ class ObligationCoverageSuite extends munit.FunSuite {
     val cli = AlliumCli.download(Release.latest, root.resolve("target/allium-cli")).fold(fail(_), identity)
     val specs = Files.list(root.resolve("specs")).iterator.asScala.filter(_.toString.endsWith(".allium")).toList.sorted
 
-    val inputs = specs.map { p =>
-      val rel = root.relativize(p).toString
+    val plans = specs.map { p =>
       val name = SpecName(p.getFileName.toString.stripSuffix(".allium"))
-      val source = Files.readAllBytes(p)
-      val plan = cli.plan(root, rel).flatMap(AlliumJson.plan).fold(fail(_), identity)
-      val outline = cli.parse(root, rel).flatMap(AlliumJson.outline).fold(fail(_), identity)
-      (SpecPlan(name, plan, source), SupersededMarker.commentLine.superseded(source, outline).map(ConstructRef(name, _)))
+      SpecPlan(name, cli.plan(root, root.relativize(p).toString).flatMap(AlliumJson.plan).fold(fail(_), identity))
     }
 
     val features = Feature.readAll(root.resolve("features"), root)
@@ -73,11 +69,10 @@ class ObligationCoverageSuite extends munit.FunSuite {
     val superseded = data(Layout.default.supersededFile)(AlliumJson.superseded)
 
     val result = Coverage.reconcile(
-      inputs.map(_._1),
+      plans,
       GherkinCoverage.tags(features),
       outOfScope,
       superseded,
-      inputs.flatMap(_._2).toSet,
     )
     val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ result.problems
     assert(problems.isEmpty, (problems ++ result.reports.map(_.line) :+ result.totalLine).mkString("\n"))
@@ -112,9 +107,8 @@ without `spec`, of every spec.
 ]
 ```
 
-A construct listed here must be marked superseded in its spec. With `SupersededMarker.commentLine`, the marker is a
-block-level comment line `    -- @superseded …` (4 spaces), or an `@invariant` whose comment body starts with
-`@superseded`. Use `SupersededMarker.lines(...)` for another convention, or `SupersededMarker.none`.
+The construct must have obligations, and each superseding rule must be a live rule of a later spec. Comments in the
+spec are not read: this file is the only record of what is superseded.
 
 ### Settings
 
