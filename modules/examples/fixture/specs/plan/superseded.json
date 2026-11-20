@@ -1,0 +1,7 @@
+[
+  {
+    "spec": "001-orders",
+    "construct": "PlaceOrder",
+    "by": [{ "spec": "002-orders-v2", "construct": "PlaceOrderChecked" }]
+  }
+]

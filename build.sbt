@@ -37,7 +37,7 @@ lazy val model = (project in file("modules/model"))
   .settings(commonSettings)
   .settings(name := "allium-model")
 
-/** Circe decoders for the JSON that the `allium` CLI prints (`check`, `plan`, `parse`). */
+/** Circe decoders for the JSON that the `allium` CLI prints (`check`, `plan`, `parse`) and for the data files. */
 lazy val circe = (project in file("modules/circe"))
   .dependsOn(model, cli % "test->test", coverage % Test)
   .settings(commonSettings)

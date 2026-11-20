@@ -5,7 +5,7 @@ import com.chilipiper.allium.cli.{AlliumCli, Release}
 import com.chilipiper.allium.coverage._
 import com.chilipiper.allium.gherkin.{Feature, GherkinCoverage}
 import com.chilipiper.allium.lint.AlliumLint
-import com.chilipiper.allium.model.SpecName
+import com.chilipiper.allium.model.{ConstructRef, SpecName}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters._
@@ -22,9 +22,10 @@ class ObligationCoverageSuite extends munit.FunSuite {
   private lazy val specs: List[Path] =
     Files.list(root.resolve("specs")).iterator.asScala.filter(_.toString.endsWith(".allium")).toList.sorted
 
-  private def lines(file: String): List[String] = {
+  /** A data file that does not exist has no entries. */
+  private def data[A](file: String)(decode: String => Either[String, List[A]]): List[A] = {
     val p = root.resolve(file)
-    if (Files.exists(p)) Files.readAllLines(p).asScala.toList else Nil
+    if (Files.exists(p)) decode(Files.readString(p)).fold(e => fail(s"$file: $e"), identity) else Nil
   }
 
   private def gate(tagFilter: Tag => Boolean): (Reconciliation, List[String]) = {
@@ -40,10 +41,8 @@ class ObligationCoverageSuite extends munit.FunSuite {
       )
     }
     val features = Feature.readAll(root.resolve("features"), root)
-    val (outOfScope, p1) =
-      DataFiles.parseOutOfScope(Layout.default.outOfScopeFile, lines(Layout.default.outOfScopeFile))
-    val (superseded, p2) =
-      DataFiles.parseSuperseded(Layout.default.supersededFile, lines(Layout.default.supersededFile))
+    val outOfScope = data(Layout.default.outOfScopeFile)(AlliumJson.outOfScope)
+    val superseded = data(Layout.default.supersededFile)(AlliumJson.superseded)
     val result = Coverage.reconcile(
       inputs.map(_._1),
       GherkinCoverage.tags(features).filter(tagFilter),
@@ -51,8 +50,7 @@ class ObligationCoverageSuite extends munit.FunSuite {
       superseded,
       inputs.flatMap(_._2).toSet,
     )
-    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ p1 ++ p2 ++
-      result.problems
+    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ result.problems
     (result, problems)
   }
 

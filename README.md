@@ -9,8 +9,8 @@ Cross-built for Scala 2.13 and 3.
 
 | Module            | Depends on          | What it does                                                                          |
 |-------------------|---------------------|---------------------------------------------------------------------------------------|
-| `allium-model`    | –                   | Data types: `Obligation`, `Plan`, `Diagnostic`, `CheckReport`, `Outline`              |
-| `allium-circe`    | model, circe        | Decodes the JSON of `allium plan`, `allium parse` and `allium check`                  |
+| `allium-model`    | –                   | Data types: `Obligation`, `Plan`, `Diagnostic`, `Outline`, data file entries          |
+| `allium-circe`    | model, circe        | Decodes the JSON of `allium plan/parse/check` and the data files                      |
 | `allium-cli`      | –                   | Downloads a pinned CLI release (SHA-256 verified) and runs it                         |
 | `allium-coverage` | model               | Reconciles obligations with test tags. Pure, no I/O                                   |
 | `allium-gherkin`  | coverage, gherkin   | Reads `@obligation:<id>` tags from `.feature` files; bans skip tags                   |
@@ -30,8 +30,8 @@ libraryDependencies ++= List(
 Each obligation ends in exactly one status:
 
 - **covered**: a test of its spec carries the tag `@obligation:<id>`;
-- **superseded**: its construct is listed in `specs/plan/superseded.txt`;
-- **out of scope**: it is listed in `specs/plan/out-of-scope.txt`;
+- **superseded**: its construct is listed in `specs/plan/superseded.json`;
+- **out of scope**: it is listed in `specs/plan/out-of-scope.json`;
 - **missing**: none of the above. This is a problem.
 
 A tag that names no obligation, and a stale entry in a data file, are problems too.
@@ -49,7 +49,7 @@ import com.chilipiper.allium.circe.AlliumJson
 import com.chilipiper.allium.cli.{AlliumCli, Release}
 import com.chilipiper.allium.coverage.*
 import com.chilipiper.allium.gherkin.{Feature, GherkinCoverage}
-import com.chilipiper.allium.model.SpecName
+import com.chilipiper.allium.model.{ConstructRef, SpecName}
 
 class ObligationCoverageSuite extends munit.FunSuite {
   test("every obligation is covered") {
@@ -67,9 +67,10 @@ class ObligationCoverageSuite extends munit.FunSuite {
     }
 
     val features = Feature.readAll(root.resolve("features"), root)
-    def lines(f: String) = Option(root.resolve(f)).filter(Files.exists(_)).toList.flatMap(Files.readAllLines(_).asScala)
-    val (outOfScope, p1) = DataFiles.parseOutOfScope(Layout.default.outOfScopeFile, lines(Layout.default.outOfScopeFile))
-    val (superseded, p2) = DataFiles.parseSuperseded(Layout.default.supersededFile, lines(Layout.default.supersededFile))
+    def data[A](f: String)(decode: String => Either[String, List[A]]): List[A] =
+      Option(root.resolve(f)).filter(Files.exists(_)).toList.flatMap(p => decode(Files.readString(p)).fold(fail(_), identity))
+    val outOfScope = data(Layout.default.outOfScopeFile)(AlliumJson.outOfScope)
+    val superseded = data(Layout.default.supersededFile)(AlliumJson.superseded)
 
     val result = Coverage.reconcile(
       inputs.map(_._1),
@@ -78,8 +79,7 @@ class ObligationCoverageSuite extends munit.FunSuite {
       superseded,
       inputs.flatMap(_._2).toSet,
     )
-    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ p1 ++ p2 ++
-      result.problems
+    val problems = features.flatMap(_.problems) ++ GherkinCoverage.skippedScenarios(features) ++ result.problems
     assert(problems.isEmpty, (problems ++ result.reports.map(_.line) :+ result.totalLine).mkString("\n"))
   }
 }
@@ -87,21 +87,29 @@ class ObligationCoverageSuite extends munit.FunSuite {
 
 ### Data files
 
-`specs/plan/out-of-scope.txt`, one entry per line, `#` starts a comment:
+Both files are JSON arrays, decoded by `AlliumJson.outOfScope` and `AlliumJson.superseded`. An unknown field is an
+error, so a typo does not silently change an entry.
 
+`specs/plan/out-of-scope.json`: an obligation of a spec, or a category (the id up to its first dot) of one spec or,
+without `spec`, of every spec.
+
+```json
+[
+  { "spec": "001-auth", "obligation": "value-equality.Token", "reason": "Scala case class: equality is structural" },
+  { "category": "surface-exposure", "reason": "no UI" }
+]
 ```
-<spec|*>  <obligation id | category:<kind>>  <reason>
-001-auth  value-equality.Token               Scala case class: equality is structural
-*         category:surface-exposure          no UI
-```
 
-`*` (every spec) is allowed only with a category. `<kind>` is the id up to its first dot.
+`specs/plan/superseded.json`: a construct, then the rules of later specs that supersede it.
 
-`specs/plan/superseded.txt`: a construct, then the rules of later specs that supersede it.
-
-```
-<spec>/<Construct>  <later spec>/<Rule> [<later spec>/<Rule>…]
-001-auth/Refresh    004-auth-v2/RefreshRotating
+```json
+[
+  {
+    "spec": "001-auth",
+    "construct": "Refresh",
+    "by": [{ "spec": "004-auth-v2", "construct": "RefreshRotating" }]
+  }
+]
 ```
 
 A construct listed here must be marked superseded in its spec. With `SupersededMarker.commentLine`, the marker is a

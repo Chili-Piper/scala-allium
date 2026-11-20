@@ -55,20 +55,20 @@ object Coverage {
     val tagged: Set[(SpecName, ObligationId)] = tags.map(t => t.spec -> t.id).toSet
 
     val outOfScopeProblems = outOfScope.flatMap { e =>
-      val where = s"${layout.outOfScopeFile}:${e.line}"
+      val where = s"${layout.outOfScopeFile}: ${e.show}"
       (e.spec, e.selector) match {
         case (Some(spec), _) if !planOf.contains(spec) => List(s"$where: there is no spec ${layout.specFile(spec)}")
         case (Some(spec), Selector.Id(id)) if !planOf(spec).byId.contains(id) =>
-          List(s"$where: $spec has no obligation $id: remove the stale entry")
+          List(s"$where: ${layout.specFile(spec)} has no obligation $id: remove the stale entry")
         case (Some(spec), Selector.Id(id)) if tagged.contains(spec -> id) =>
-          List(s"$where: $spec/$id is covered by a test: remove it from the out-of-scope list")
+          List(s"$where: covered by a test: remove it from the out-of-scope list")
         case _ => Nil
       }
     }
 
     val supersededProblems =
       superseded.flatMap { s =>
-        val where = s"${layout.supersededFile}:${s.line}"
+        val where = s"${layout.supersededFile}: ${s.construct.show}"
         val c = s.construct
         val key =
           if (!planOf.contains(c.spec))
@@ -93,7 +93,7 @@ object Coverage {
       } ++
         supersededInSpecs.toList.sorted.collect {
           case c if planOf.get(c.spec).exists(_.constructs.contains(c.construct)) && !supersededBy.contains(c) =>
-            s"${layout.specFile(c.spec)}: ${c.construct} is marked superseded: add `${c.show} <superseding spec>/<rule>` " +
+            s"${layout.specFile(c.spec)}: ${c.construct} is marked superseded: add an entry for ${c.show} " +
               s"to ${layout.supersededFile}"
         }
 

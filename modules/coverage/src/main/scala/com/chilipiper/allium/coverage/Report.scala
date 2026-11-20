@@ -1,6 +1,6 @@
 package com.chilipiper.allium.coverage
 
-import com.chilipiper.allium.model.{Obligation, SpecName}
+import com.chilipiper.allium.model.{ConstructRef, Obligation, SpecName}
 
 /** Each obligation ends in exactly one status. */
 sealed trait Status extends Product with Serializable

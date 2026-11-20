@@ -12,12 +12,12 @@ final case class Layout(
 
 object Layout {
 
-  /** `specs/<spec>.allium`, `features/<spec>/`, `specs/plan/out-of-scope.txt`, `specs/plan/superseded.txt`. */
+  /** `specs/<spec>.allium`, `features/<spec>/`, `specs/plan/out-of-scope.json`, `specs/plan/superseded.json`. */
   val default: Layout = Layout(
     specFile = s => s"specs/$s.allium",
     testsOf = s => s"features/$s/",
-    outOfScopeFile = "specs/plan/out-of-scope.txt",
-    supersededFile = "specs/plan/superseded.txt",
+    outOfScopeFile = "specs/plan/out-of-scope.json",
+    supersededFile = "specs/plan/superseded.json",
   )
 
 }

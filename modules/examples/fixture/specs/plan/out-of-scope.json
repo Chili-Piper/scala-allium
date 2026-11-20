@@ -1,0 +1,11 @@
+[
+  {
+    "spec": "001-orders",
+    "obligation": "entity-fields.Order",
+    "reason": "the Scala case class has these fields by construction"
+  },
+  {
+    "category": "config-default",
+    "reason": "defaults are read from configuration, not tested"
+  }
+]
