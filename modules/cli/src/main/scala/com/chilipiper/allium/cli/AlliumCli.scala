@@ -12,11 +12,11 @@ import scala.util.control.NonFatal
 
 /** A runnable `allium` CLI binary.
   *
-  * Get one with [[AlliumCli.download]] (pinned release, checksum-verified) or [[AlliumCli.at]] (an existing binary).
+  * Get one with `AlliumCli.download` (pinned release, checksum-verified) or `AlliumCli.at` (an existing binary).
   */
 final class AlliumCli private (val binary: Path) {
 
-  /** Runs `allium <args>` in `cwd`. A non-zero exit is not an error: see [[AlliumCli.Result.json]]. */
+  /** Runs `allium <args>` in `cwd`. A non-zero exit is not an error: see `AlliumCli.Result.json`. */
   def run(cwd: Path, args: String*): Either[String, AlliumCli.Result] =
     try {
       val process = new ProcessBuilder((binary.toString +: args).asJava).directory(cwd.toFile).start()

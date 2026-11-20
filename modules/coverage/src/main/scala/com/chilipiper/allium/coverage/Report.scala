@@ -33,7 +33,7 @@ object SpecReport {
 
 }
 
-/** The result of [[Coverage.reconcile]]. The gate passes when `problems` is empty. */
+/** The result of `Coverage.reconcile`. The gate passes when `problems` is empty. */
 final case class Reconciliation(reports: List[SpecReport], problems: List[String]) {
 
   def totalLine: String =

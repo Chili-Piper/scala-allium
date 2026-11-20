@@ -11,7 +11,7 @@ object GherkinCoverage {
   val specOfParentDirectory: Feature => Option[SpecName] =
     f => Option(Paths.get(f.path).getParent).map(p => SpecName(p.getFileName.toString))
 
-  /** The `@obligation:<id>` tags of every scenario, for [[com.chilipiper.allium.coverage.Coverage.reconcile]].
+  /** The `@obligation:<id>` tags of every scenario, for `Coverage.reconcile`.
     *
     * @param specOf
     *   which spec the scenarios of a feature test; a feature without a spec contributes no tags
