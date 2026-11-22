@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val circe = "0.14.15"
+    val circe = "0.14.17"
     val gherkin = "43.0.0"
     val munit = "1.3.6"
   }
