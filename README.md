@@ -137,4 +137,7 @@ The tests of `allium-cli`, `allium-circe` and `allium-lint` download the pinned 
 
 ## Publishing
 
-`sbt-ci-release` publishes to Maven Central on a `v*` tag. Do not push a tag while the repository is private.
+`sbt-ci-release` publishes to Maven Central from CI:
+
+- each push to `main` publishes a snapshot;
+- each published GitHub release (tag `vX.Y.Z`) publishes that version.

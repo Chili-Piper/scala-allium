@@ -7,7 +7,7 @@ Origin: the Allium ↔ Gherkin traceability gate of `Chili-Piper/edge-fire-servi
 
 - A library that other Scala projects can use for the "every `allium plan` obligation is covered by a test" gate.
 - Small modules with few dependencies. Users take only what they need.
-- Public later (Apache-2.0, Maven Central). Private until then; no release tags.
+- Public (Apache-2.0, Maven Central).
 
 ## Modules
 
@@ -41,6 +41,5 @@ calling `allium-cli` from the test itself.
 
 ## Not done yet
 
-- Migrate edge-fire to the library (separate PR, after the first release).
+- Migrate edge-fire to the library (separate PR, on the first release).
 - Test-framework integrations (`allium-munit` / `allium-scalatest`) that wrap the README example into one call.
-- Publishing: first `v*` tag only when the repository is public.

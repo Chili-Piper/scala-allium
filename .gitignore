@@ -13,3 +13,4 @@ idea-bloop.sbt
 *.ipr
 *.iws
 local.sbt
+worktrees
