@@ -15,7 +15,7 @@ ThisBuild / scmInfo := Some(
 )
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / scalaVersion := "2.13.18"
-ThisBuild / crossScalaVersions := List("2.13.18", "3.3.9")
+ThisBuild / crossScalaVersions := List("2.13.18", "3.9.0")
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
 
