@@ -36,6 +36,12 @@ Each obligation ends in exactly one status:
 
 A tag that names no obligation, and a stale entry in a data file, are problems too.
 
+`allium plan` has no obligation for a surface `@guarantee` or a contract `@invariant`. `AnnotationObligations.add`
+derives them from `allium parse`: `surface-guarantee.<Surface>.<Name>` and `contract-invariant.<Contract>.<Name>`
+(categories `surface_guarantee`, `contract_invariant`), the ids proposed upstream for `allium plan`. When the CLI emits
+them, `add` keeps the CLI's and the tags stay the same. Which kind of test fits them:
+[docs/testing-strategy.md](docs/testing-strategy.md).
+
 ### Example (munit)
 
 A tested version of this example, with a fixture repository, is
@@ -59,7 +65,11 @@ class ObligationCoverageSuite extends munit.FunSuite {
 
     val plans = specs.map { p =>
       val name = SpecName(p.getFileName.toString.stripSuffix(".allium"))
-      SpecPlan(name, cli.plan(root, root.relativize(p).toString).flatMap(AlliumJson.plan).fold(fail(_), identity))
+      val file = root.relativize(p).toString
+      val plan = cli.plan(root, file).flatMap(AlliumJson.plan).fold(fail(_), identity)
+      val outline = cli.parse(root, file).flatMap(AlliumJson.outline).fold(fail(_), identity)
+      // Surface @guarantee and contract @invariant: `allium plan` has no obligation for them.
+      SpecPlan(name, AnnotationObligations.add(plan, outline))
     }
 
     val features = Feature.readAll(root.resolve("features"), root)
