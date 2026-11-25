@@ -5,8 +5,8 @@ import com.chilipiper.allium.model._
 /** Reconciles the obligations of `allium plan` with the tags of the tests.
   *
   * Every obligation ends in exactly one [[Status]]: covered (a test of its spec carries its tag), superseded (its
-  * construct is in the superseded file), out of scope (the out-of-scope file) or missing. Missing obligations, tags
-  * that name no obligation, and stale data file entries are problems.
+  * construct is in the superseded file), out of scope (the out-of-scope file), pending (a known gap, in the pending
+  * file) or missing. Missing obligations, tags that name no obligation, and stale data file entries are problems.
   */
 object Coverage {
 
@@ -16,6 +16,7 @@ object Coverage {
       outOfScope: List[OutOfScope],
       superseded: List[Supersession],
       settings: Settings = Settings.default,
+      pending: List[Pending] = Nil,
   ): Reconciliation = {
     val layout = settings.layout
     val prefix = settings.tagPrefix
@@ -86,6 +87,8 @@ object Coverage {
         key ++ successors
       }
 
+    val pendingOf = pending.map(p => (p.spec, p.obligation) -> p).toMap
+
     val reports = plans.sortBy(_.spec).map { plan =>
       SpecReport(
         plan.spec,
@@ -99,7 +102,8 @@ object Coverage {
                 case None    =>
                   outOfScope.find(e => e.spec.forall(_ == plan.spec) && e.selector.matches(o)) match {
                     case Some(e) => Status.OutOfScope(e.reason)
-                    case None    => Status.Missing
+                    case None    =>
+                      pendingOf.get(plan.spec -> o.id).fold[Status](Status.Missing)(p => Status.Pending(p.reason))
                   }
               }
           o -> status
@@ -113,7 +117,32 @@ object Coverage {
         s"${layout.specFile(r.spec)}: ${plan.show(o)}: no test in ${layout.testsOf(r.spec)} carries $prefix${o.id}"
       }
     }
-    Reconciliation(reports, planProblems ++ tagProblems ++ outOfScopeProblems ++ supersededProblems ++ missing)
+    val statusOf: Map[(SpecName, ObligationId), Status] =
+      reports.flatMap(r => r.statuses.map { case (o, st) => (r.spec, o.id) -> st }).toMap
+    val pendingProblems = pending.flatMap { p =>
+      val where = s"${layout.pendingFile}: ${p.show}"
+      statusOf.get(p.spec -> p.obligation) match {
+        case _ if !planOf.contains(p.spec) => List(s"$where: there is no spec ${layout.specFile(p.spec)}")
+        case None => List(s"$where: ${layout.specFile(p.spec)} has no such obligation: remove the stale entry")
+        case Some(Status.Pending(_)) => Nil
+        case Some(Status.Covered)    => List(s"$where: covered by a test: remove it from the pending list")
+        case Some(_)                 => List(s"$where: out of scope or superseded: remove it from the pending list")
+      }
+    }
+    val duplicatePending =
+      pending
+        .groupBy(p => p.spec -> p.obligation)
+        .collect {
+          case (_, ps) if ps.size > 1 => s"${layout.pendingFile}: ${ps.head.show} is listed ${ps.size} times"
+        }
+        .toList
+        .sorted
+
+    Reconciliation(
+      reports,
+      planProblems ++ tagProblems ++ outOfScopeProblems ++ supersededProblems ++ pendingProblems ++ duplicatePending ++
+        missing,
+    )
   }
 
 }

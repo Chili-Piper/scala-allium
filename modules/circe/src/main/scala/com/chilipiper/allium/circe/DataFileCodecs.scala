@@ -1,6 +1,6 @@
 package com.chilipiper.allium.circe
 
-import com.chilipiper.allium.model.{ConstructRef, ObligationId, OutOfScope, Selector, SpecName, Supersession}
+import com.chilipiper.allium.model.{ConstructRef, ObligationId, OutOfScope, Pending, Selector, SpecName, Supersession}
 import io.circe.{ACursor, Decoder, DecodingFailure, HCursor}
 
 /** Decoders for the data files of the coverage gate. People write these files by hand, so an unknown field is an error:
@@ -56,5 +56,15 @@ object DataFileCodecs {
         by <- c.get[List[ConstructRef]]("by")(Decoder.decodeList(constructRefDecoder))
         _ <- if (by.isEmpty) Left(DecodingFailure("`by` names no superseding rule", c.history)) else Right(())
       } yield Supersession(ConstructRef(s, construct), by)
+
+  /** `{"spec": "001-a", "obligation": "surface-guarantee.S.G", "reason": "…"}`: a known gap. */
+  implicit val pendingDecoder: Decoder[Pending] =
+    (c: HCursor) =>
+      for {
+        _ <- only(c, Set("spec", "obligation", "reason"))
+        s <- spec(c.downField("spec"))
+        obligation <- c.get[String]("obligation")
+        reason <- c.get[String]("reason")
+      } yield Pending(s, ObligationId(obligation), reason)
 
 }

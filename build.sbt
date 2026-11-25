@@ -66,6 +66,24 @@ lazy val gherkin = (project in file("modules/gherkin"))
     libraryDependencies += Dependencies.gherkin,
   )
 
+/** Reads `obligation:<id>` tags from ScalaTest suites. */
+lazy val scalatestModule = (project in file("modules/scalatest"))
+  .dependsOn(coverage)
+  .settings(commonSettings)
+  .settings(
+    name := "allium-scalatest",
+    libraryDependencies += Dependencies.scalatest,
+  )
+
+/** Reads `obligation:<id>` tags from munit suites. */
+lazy val munitModule = (project in file("modules/munit"))
+  .dependsOn(coverage)
+  .settings(commonSettings)
+  .settings(
+    name := "allium-munit",
+    libraryDependencies += Dependencies.munitCompile,
+  )
+
 /** Checks that the `allium` CLI does not do yet, on the `allium parse` AST and `allium check` diagnostics. */
 lazy val lint = (project in file("modules/lint"))
   .dependsOn(model, circe, cli % "test->test")
@@ -77,7 +95,7 @@ lazy val lint = (project in file("modules/lint"))
 
 /** The README example, end to end on a fixture repository with the real CLI. Not published. */
 lazy val examples = (project in file("modules/examples"))
-  .dependsOn(circe, cli, gherkin, lint)
+  .dependsOn(circe, cli, gherkin, munitModule, lint)
   .settings(commonSettings)
   .settings(
     name := "allium-examples",
@@ -85,7 +103,7 @@ lazy val examples = (project in file("modules/examples"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(model, circe, cli, coverage, gherkin, lint, examples)
+  .aggregate(model, circe, cli, coverage, gherkin, scalatestModule, munitModule, lint, examples)
   .settings(
     name := "scala-allium",
     publish / skip := true,

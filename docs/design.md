@@ -18,6 +18,8 @@ Origin: the Allium ↔ Gherkin traceability gate of `Chili-Piper/edge-fire-servi
 | `allium-cli`      | – (JDK only)               | Download + SHA-256 check + run the CLI                              |
 | `allium-coverage` | model                      | Pure reconciliation engine                                          |
 | `allium-gherkin`  | coverage, io.cucumber:gherkin | Feature parsing, `@obligation:` tags, skip-tag policy           |
+| `allium-scalatest` | coverage, scalatest       | `obligation:<id>` tags of ScalaTest suites                          |
+| `allium-munit`    | coverage, munit            | `obligation:<id>` tags of munit suites                              |
 | `allium-lint`     | model, circe               | Undeclared `alias/config.param`; fatal warning codes                |
 | `examples`        | all (not published)        | The README example, end to end, on a fixture repository             |
 
@@ -42,4 +44,5 @@ calling `allium-cli` from the test itself.
 ## Not done yet
 
 - Migrate edge-fire to the library (separate PR, on the first release).
-- Test-framework integrations (`allium-munit` / `allium-scalatest`) that wrap the README example into one call.
+- A one-call wrapper of the README example per test framework.
+- `allium-scalacheck`: helpers for stateful invariant properties.

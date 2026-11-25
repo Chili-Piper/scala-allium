@@ -39,3 +39,10 @@ final case class OutOfScope(spec: Option[SpecName], selector: Selector, reason: 
 
 /** `construct` is superseded by the rules `by` of later specs. */
 final case class Supersession(construct: ConstructRef, by: List[ConstructRef])
+
+/** A known gap: an obligation without a test yet. The gate reports it but does not fail on it, so a stricter gate can
+  * be adopted before every gap is closed. An entry that is no longer a gap is a problem, so the list only shrinks.
+  */
+final case class Pending(spec: SpecName, obligation: ObligationId, reason: String) {
+  def show: String = s"$spec/$obligation"
+}

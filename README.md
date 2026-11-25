@@ -14,6 +14,8 @@ Cross-built for Scala 2.13 and 3.
 | `allium-cli`      | –                   | Downloads a pinned CLI release (SHA-256 verified) and runs it                         |
 | `allium-coverage` | model               | Reconciles obligations with test tags. Pure, no I/O                                   |
 | `allium-gherkin`  | coverage, gherkin   | Reads `@obligation:<id>` tags from `.feature` files; bans skip tags                   |
+| `allium-scalatest` | coverage, scalatest | Reads `obligation:<id>` tags from ScalaTest suites (`Suite.tags`)                     |
+| `allium-munit`    | coverage, munit     | Reads `obligation:<id>` tags from munit suites (`munitTests()`)                       |
 | `allium-lint`     | model, circe        | Checks the CLI does not make yet: undeclared `alias/config.param`, fatal warning codes |
 
 ```scala
@@ -90,6 +92,25 @@ class ObligationCoverageSuite extends munit.FunSuite {
 }
 ```
 
+### Tests other than Gherkin scenarios
+
+Unit, property and integration tests count too: give the test the tag `obligation:<id>` and add its suite to the gate.
+The tags are read from the framework's model of the suite; the tests do not run and the source is not read.
+
+```scala
+// ScalaTest (allium-scalatest)
+test("hash is lowercase hex", Tag("obligation:contract-invariant.CryptoOps.HashDefinition")) { … }
+// munit (allium-munit)
+test("hash is lowercase hex".tag(new munit.Tag("obligation:contract-invariant.CryptoOps.HashDefinition"))) { … }
+
+val tags =
+  GherkinCoverage.tags(features) ++
+    ScalaTestCoverage.tags(SpecName("001-auth"), new CryptoOpsSuite) ++
+    MunitCoverage.tags(SpecName("001-auth"), new TokenStoreSuite)
+```
+
+Which kind of test fits which construct: [docs/testing-strategy.md](docs/testing-strategy.md).
+
 ### Data files
 
 Both files are JSON arrays, decoded by `AlliumJson.outOfScope` and `AlliumJson.superseded`. An unknown field is an
@@ -119,6 +140,17 @@ without `spec`, of every spec.
 
 The construct must have obligations, and each superseding rule must be a live rule of a later spec. Comments in the
 spec are not read: this file is the only record of what is superseded.
+
+`specs/plan/pending.json` (optional): known gaps. A pending obligation is reported (`pending: N` in the report line)
+but does not fail the gate, so a stricter gate can be adopted before every gap is closed. An entry that is covered,
+out of scope, superseded or not in the plan is a problem, so the list only shrinks. Pass it as the last argument of
+`Coverage.reconcile` (decoded by `AlliumJson.pending`).
+
+```json
+[
+  { "spec": "001-auth", "obligation": "surface-guarantee.Discovery.IssuerMatchesConfig", "reason": "no boundary test yet" }
+]
+```
 
 ### Settings
 

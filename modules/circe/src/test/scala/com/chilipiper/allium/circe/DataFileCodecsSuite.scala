@@ -69,4 +69,18 @@ class DataFileCodecsSuite extends munit.FunSuite {
     assert(AlliumJson.superseded("{}").isLeft)
   }
 
+  test("pending: spec, obligation and reason; an unknown field is an error") {
+    assertEquals(
+      AlliumJson.pending("""[{"spec": "001-a", "obligation": "surface-guarantee.S.G", "reason": "no test yet"}]"""),
+      Right(List(Pending(SpecName("001-a"), ObligationId("surface-guarantee.S.G"), "no test yet"))),
+    )
+    assert(
+      AlliumJson
+        .pending("""[{"spec": "001-a", "obligation": "x", "reason": "r", "owner": "me"}]""")
+        .swap
+        .exists(_.contains("unknown fields owner")),
+    )
+    assert(AlliumJson.pending("""[{"spec": "001-a", "reason": "r"}]""").isLeft)
+  }
+
 }

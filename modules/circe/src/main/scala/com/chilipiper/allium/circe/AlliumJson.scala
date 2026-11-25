@@ -1,6 +1,6 @@
 package com.chilipiper.allium.circe
 
-import com.chilipiper.allium.model.{CheckReport, OutOfScope, Outline, Plan, Supersession}
+import com.chilipiper.allium.model.{CheckReport, OutOfScope, Outline, Pending, Plan, Supersession}
 import io.circe.jawn.CirceSupportParser
 import io.circe.{Decoder, Json}
 import org.typelevel.jawn.AsyncParser
@@ -41,6 +41,10 @@ object AlliumJson {
   /** A superseded file: a JSON array of entries (see [[DataFileCodecs]]). */
   def superseded(text: String): Either[String, List[Supersession]] =
     single(text).flatMap(decode[List[Supersession]](_)(Decoder.decodeList(DataFileCodecs.supersessionDecoder)))
+
+  /** A pending file (known gaps): a JSON array of entries (see [[DataFileCodecs]]). */
+  def pending(text: String): Either[String, List[Pending]] =
+    single(text).flatMap(decode[List[Pending]](_)(Decoder.decodeList(DataFileCodecs.pendingDecoder)))
 
   /** The stdout of `allium check <dir>`. */
   def check(text: String): Either[String, List[CheckReport]] =
