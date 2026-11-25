@@ -50,9 +50,9 @@ reads tags from the test framework's own model of the tests; scala-allium never 
 | Module | Status | Source of tags | Use it for |
 |---|---|---|---|
 | `allium-gherkin` | Exists | `@obligation:<id>` on a scenario, its `Feature:`/`Rule:` or `Examples:` | BDD scenarios |
-| `allium-scalatest` | Planned | `Tag("obligation:<id>")` on a test (`Suite.tags`); suites found by class name | ScalaTest unit, integration and property tests |
-| `allium-munit` | Planned | `Tag("obligation:<id>")` on a test (`Test.tags`) | munit unit, integration and property tests |
-| `allium-scalacheck` | Later | – | Helpers for stateful invariant properties (run an invariant check after each step of a `Commands` sequence). Not a tag source: ScalaCheck properties run inside ScalaTest or munit and are tagged there |
+| `allium-scalatest` | [PR #18](https://github.com/Chili-Piper/scala-allium/pull/18) | `Tag("obligation:<id>")` on a test (`Suite.tags`); suites found by class name | ScalaTest unit, integration and property tests |
+| `allium-munit` | [PR #18](https://github.com/Chili-Piper/scala-allium/pull/18) | `Tag("obligation:<id>")` on a test (`Test.tags`) | munit unit, integration and property tests |
+| `allium-scalacheck` | [PR #18](https://github.com/Chili-Piper/scala-allium/pull/18) | – | `InvariantProperty`: random operation sequences, each operation generated from the current state, the invariant checked after every step. Not a tag source: ScalaCheck properties run inside ScalaTest or munit and are tagged there |
 
 All sources produce the same `Coverage` input, so one project can mix them: scenarios for rules, properties for
 invariants, unit tests for contracts.
