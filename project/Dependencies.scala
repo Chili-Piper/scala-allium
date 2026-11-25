@@ -7,6 +7,7 @@ object Dependencies {
     val gherkin = "43.0.0"
     val munit = "1.3.6"
     val scalatest = "3.2.19"
+    val scalacheck = "1.18.1"
   }
 
   val circeCore = "io.circe" %% "circe-core" % Versions.circe
@@ -17,5 +18,6 @@ object Dependencies {
   /** For `allium-munit` and `allium-scalatest`, which read the tests of these frameworks. */
   val munitCompile = "org.scalameta" %% "munit" % Versions.munit
   val scalatest = "org.scalatest" %% "scalatest" % Versions.scalatest
+  val scalacheck = "org.scalacheck" %% "scalacheck" % Versions.scalacheck
 
 }

@@ -84,6 +84,14 @@ lazy val munitModule = (project in file("modules/munit"))
     libraryDependencies += Dependencies.munitCompile,
   )
 
+/** ScalaCheck helpers: stateful properties that check an Allium `invariant` after every step. */
+lazy val scalacheckModule = (project in file("modules/scalacheck"))
+  .settings(commonSettings)
+  .settings(
+    name := "allium-scalacheck",
+    libraryDependencies += Dependencies.scalacheck,
+  )
+
 /** Checks that the `allium` CLI does not do yet, on the `allium parse` AST and `allium check` diagnostics. */
 lazy val lint = (project in file("modules/lint"))
   .dependsOn(model, circe, cli % "test->test")
@@ -103,7 +111,7 @@ lazy val examples = (project in file("modules/examples"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(model, circe, cli, coverage, gherkin, scalatestModule, munitModule, lint, examples)
+  .aggregate(model, circe, cli, coverage, gherkin, scalatestModule, munitModule, scalacheckModule, lint, examples)
   .settings(
     name := "scala-allium",
     publish / skip := true,

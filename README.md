@@ -16,6 +16,7 @@ Cross-built for Scala 2.13 and 3.
 | `allium-gherkin`  | coverage, gherkin   | Reads `@obligation:<id>` tags from `.feature` files; bans skip tags                   |
 | `allium-scalatest` | coverage, scalatest | Reads `obligation:<id>` tags from ScalaTest suites (`Suite.tags`)                     |
 | `allium-munit`    | coverage, munit     | Reads `obligation:<id>` tags from munit suites (`munitTests()`)                       |
+| `allium-scalacheck` | scalacheck        | `InvariantProperty`: checks an Allium `invariant` after every step of random operation sequences |
 | `allium-lint`     | model, circe        | Checks the CLI does not make yet: undeclared `alias/config.param`, fatal warning codes |
 
 ```scala
@@ -108,6 +109,18 @@ val tags =
     ScalaTestCoverage.tags(SpecName("001-auth"), new CryptoOpsSuite) ++
     MunitCoverage.tags(SpecName("001-auth"), new TokenStoreSuite)
 ```
+
+A top-level `invariant` must hold after every state-changing rule; `allium-scalacheck` checks that on random sequences
+of operations, each generated from the current state:
+
+```scala
+test("invariant NonNegativeStock", Tag("obligation:invariant.NonNegativeStock")) {
+  check(InvariantProperty("NonNegativeStock")(Gen.const(Stock.empty), Stock.operations, Stock.apply)(_.count >= 0))
+}
+```
+
+A failure names the step and the operation that broke the invariant. Laws for `value-equality` and `enum-comparable`
+are in cats-kernel-laws (discipline).
 
 Which kind of test fits which construct: [docs/testing-strategy.md](docs/testing-strategy.md).
 
