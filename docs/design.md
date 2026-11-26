@@ -45,4 +45,4 @@ calling `allium-cli` from the test itself.
 ## Not done yet
 
 - Migrate edge-fire to the library (separate PR, on the first release).
-- A one-call wrapper of the README example per test framework.
+- A one-call wrapper of the README example per test framework. See [testing-strategy.md](testing-strategy.md).
