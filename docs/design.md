@@ -42,4 +42,5 @@ calling `allium-cli` from the test itself.
 ## Not done yet
 
 - Migrate edge-fire to the library (separate PR, on the first release).
-- Test-framework integrations (`allium-munit` / `allium-scalatest`) that wrap the README example into one call.
+- Test-framework integrations (`allium-munit` / `allium-scalatest`) that read `obligation:<id>` tags as coverage and wrap
+  the README example into one call. See [testing-strategy.md](testing-strategy.md).

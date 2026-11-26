@@ -27,6 +27,8 @@ libraryDependencies ++= List(
 
 ## The coverage gate
 
+Which kind of test fits which Allium construct (BDD, property, unit, boundary, structural): [docs/testing-strategy.md](docs/testing-strategy.md).
+
 Each obligation ends in exactly one status:
 
 - **covered**: a test of its spec carries the tag `@obligation:<id>`;
