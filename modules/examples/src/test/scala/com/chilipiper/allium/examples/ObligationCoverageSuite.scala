@@ -31,7 +31,10 @@ class ObligationCoverageSuite extends munit.FunSuite {
   private def gate(tagFilter: Tag => Boolean): (Reconciliation, List[String]) = {
     val plans = specs.map { p =>
       val name = SpecName(p.getFileName.toString.stripSuffix(".allium"))
-      SpecPlan(name, cli.plan(root, root.relativize(p).toString).flatMap(AlliumJson.plan).fold(e => fail(e), identity))
+      val file = root.relativize(p).toString
+      val plan = cli.plan(root, file).flatMap(AlliumJson.plan).fold(e => fail(e), identity)
+      val outline = cli.parse(root, file).flatMap(AlliumJson.outline).fold(e => fail(e), identity)
+      SpecPlan(name, AnnotationObligations.add(plan, outline))
     }
     val features = Feature.readAll(root.resolve("features"), root)
     val outOfScope = data(Layout.default.outOfScopeFile)(AlliumJson.outOfScope)
@@ -53,7 +56,7 @@ class ObligationCoverageSuite extends munit.FunSuite {
       result.reports.map(_.line),
       List(
         "001-orders: 6 obligations, 2 covered, 4 uncovered (out of scope: 2, superseded: 2, missing: 0)",
-        "002-orders-v2: 3 obligations, 3 covered, 0 uncovered (out of scope: 0, superseded: 0, missing: 0)",
+        "002-orders-v2: 6 obligations, 6 covered, 0 uncovered (out of scope: 0, superseded: 0, missing: 0)",
       ),
     )
   }
@@ -64,6 +67,15 @@ class ObligationCoverageSuite extends munit.FunSuite {
     assert(problems.head.startsWith("specs/002-orders-v2.allium: rule-failure.PlaceOrderChecked.2 — "), problems)
     assert(
       problems.head.endsWith("no test in features/002-orders-v2/ carries @obligation:rule-failure.PlaceOrderChecked.2"),
+    )
+  }
+
+  test("a surface guarantee without a tag is missing") {
+    val (_, problems) = gate(_.id.value != "surface-guarantee.Checkout.OneOrderPerPlacement")
+    assertEquals(problems.size, 1, problems)
+    assert(
+      problems.head.startsWith("specs/002-orders-v2.allium: surface-guarantee.Checkout.OneOrderPerPlacement — "),
+      problems,
     )
   }
 

@@ -19,3 +19,10 @@ Feature: Placing an order
       Given an open order with 11 items
       When the customer places it
       Then the request is rejected
+
+  @obligation:surface-actor.Checkout @obligation:surface-provides.Checkout
+  @obligation:surface-guarantee.Checkout.OneOrderPerPlacement
+  Scenario: a retried placement creates one order
+    Given an open order with 3 items
+    When the customer places it twice
+    Then there is one placed order

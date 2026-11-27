@@ -7,3 +7,13 @@ rule PlaceOrderChecked {
     requires: order.items <= v1/config.max_items
     ensures: order.status = placed
 }
+
+surface Checkout {
+    facing customer: Customer
+
+    provides:
+        Place(order)
+
+    @guarantee OneOrderPerPlacement
+        -- Placing an order creates exactly one order, even when the request is retried.
+}
