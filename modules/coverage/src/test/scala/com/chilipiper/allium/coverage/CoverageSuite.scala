@@ -39,7 +39,8 @@ class CoverageSuite extends munit.FunSuite {
       outOfScope: List[OutOfScope] = Nil,
       superseded: List[Supersession] = List(oldByB),
       plans: List[SpecPlan] = List(a, b),
-  ): Reconciliation = Coverage.reconcile(plans, tags, outOfScope, superseded)
+      pending: List[Pending] = Nil,
+  ): Reconciliation = Coverage.reconcile(plans, tags, outOfScope, superseded, Settings.default, pending)
 
   private val allTagged =
     List(
@@ -204,6 +205,52 @@ class CoverageSuite extends munit.FunSuite {
     assert(SpecOrder.any.isLater(SpecName("a"), SpecName("b")))
     assert(!SpecOrder.numericPrefix.isLater(SpecName("a"), SpecName("001-b")))
     assert(SpecOrder.numericPrefix.isLater(SpecName("010-a"), SpecName("009-b")))
+  }
+
+  private def pending(spec: SpecName, id: String): Pending = Pending(spec, ObligationId(id), "no test yet")
+
+  private val withoutV = allTagged.filterNot(_.id.value == "value-equality.V")
+
+  test("a pending obligation is reported but is not a problem; the line counts it") {
+    val r = run(tags = withoutV, pending = List(pending(A, "value-equality.V")))
+    assertEquals(r.problems, Nil)
+    assertEquals(statusOf(r, A, "value-equality.V"), Status.Pending("no test yet"))
+    assertEquals(
+      r.reports.head.line,
+      "001-a: 6 obligations, 3 covered, 3 uncovered (out of scope: 0, superseded: 2, pending: 1, missing: 0)",
+    )
+    assert(r.totalLine.contains("pending: 1, missing: 0"), r.totalLine)
+  }
+
+  test("a missing obligation that is not pending still fails the gate") {
+    val r = run(tags = withoutV, pending = List(pending(A, "rule-failure.R.1")))
+    assert(r.problems.exists(_.contains("value-equality.V")), r.problems)
+  }
+
+  test("a pending entry that is covered, superseded, unknown, duplicated or of an unknown spec is a problem") {
+    val r = run(
+      tags = allTagged,
+      pending = List(
+        pending(A, "rule-success.R"),
+        pending(A, "rule-failure.Old.1"),
+        pending(A, "rule-success.Gone"),
+        pending(SpecName("009-x"), "rule-success.R"),
+        pending(B, "rule-success.New"),
+        pending(B, "rule-success.New"),
+      ),
+    )
+    assertEquals(
+      r.problems.filter(_.startsWith("specs/plan/pending.json")),
+      List(
+        "specs/plan/pending.json: 001-a/rule-success.R: covered by a test: remove it from the pending list",
+        "specs/plan/pending.json: 001-a/rule-failure.Old.1: out of scope or superseded: remove it from the pending list",
+        "specs/plan/pending.json: 001-a/rule-success.Gone: specs/001-a.allium has no such obligation: remove the stale entry",
+        "specs/plan/pending.json: 009-x/rule-success.R: there is no spec specs/009-x.allium",
+        "specs/plan/pending.json: 002-b/rule-success.New: covered by a test: remove it from the pending list",
+        "specs/plan/pending.json: 002-b/rule-success.New: covered by a test: remove it from the pending list",
+        "specs/plan/pending.json: 002-b/rule-success.New is listed 2 times",
+      ),
+    )
   }
 
 }
