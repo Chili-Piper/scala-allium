@@ -16,7 +16,7 @@ Cross-built for Scala 2.13 and 3.
 | `allium-gherkin`  | coverage, gherkin   | Reads `@obligation:<id>` tags from `.feature` files; bans skip tags                   |
 | `allium-scalatest` | coverage, scalatest | Reads `obligation:<id>` tags from ScalaTest suites (`Suite.tags`)                     |
 | `allium-munit`    | coverage, munit     | Reads `obligation:<id>` tags from munit suites (`munitTests()`)                       |
-| `allium-scalacheck` | scalacheck        | `InvariantProperty`: checks an Allium `invariant` after every step of random operation sequences |
+| `allium-scalacheck` | scalacheck        | `InvariantProperty`: checks an Allium `invariant` after every step of random operation sequences; `PropertyStep`: runs a property inside a Cucumber step |
 | `allium-lint`     | model, circe        | Checks the CLI does not make yet: undeclared `alias/config.param`, fatal warning codes |
 
 ```scala
@@ -125,7 +125,9 @@ A failure names the step and the operation that broke the invariant. Run it in m
 test; an invariant that only the database enforces (a unique index) gets one slow test instead. Laws for `value-equality` and `enum-comparable`
 are in cats-kernel-laws (discipline).
 
-Which kind of test fits which construct: [docs/testing-strategy.md](docs/testing-strategy.md).
+Prefer Gherkin scenarios for every obligation, properties included: a "for any …" step runs a ScalaCheck property with
+`PropertyStep.check`. Which technique fits which construct, with a scenario for each:
+[docs/testing-strategy.md](docs/testing-strategy.md).
 
 ### Data files
 
