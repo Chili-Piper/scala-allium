@@ -8,15 +8,16 @@ import org.scalacheck.{Gen, Prop}
   * step.
   *
   * {{{
-  * test("invariant UniqueClientIds", Tag("obligation:invariant.UniqueClientIds")) {
-  *   val ids = (cs: Clients) => cs.all.map(_.clientId)
-  *   check(InvariantProperty("UniqueClientIds")(Gen.const(Clients.empty), Clients.operations, Clients.apply)(cs =>
-  *     ids(cs).distinct.size == ids(cs).size))
+  * test("invariant NonNegativeStock", Tag("obligation:invariant.NonNegativeStock")) {
+  *   check(InvariantProperty("NonNegativeStock")(Gen.const(Stock.empty), Stock.operations, Stock.apply)(_.count >= 0))
   * }
   * }}}
   *
-  * Operations depend on the state, so a shorter sequence may not be valid: the property does not shrink. To test a
-  * system with effects (a database), model it in `step` (run the effect there) and read the state back.
+  * Operations depend on the state, so a shorter sequence may not be valid: the property does not shrink.
+  *
+  * Run it in memory: `step` applies the pure rules. Against a real database each case is a round trip, so a run gets
+  * few cases and is slow. An invariant that only the database enforces (a unique index) needs one slow test, not this
+  * property.
   */
 object InvariantProperty {
 

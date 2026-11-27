@@ -121,7 +121,8 @@ test("invariant NonNegativeStock", Tag("obligation:invariant.NonNegativeStock"))
 }
 ```
 
-A failure names the step and the operation that broke the invariant. Laws for `value-equality` and `enum-comparable`
+A failure names the step and the operation that broke the invariant. Run it in memory on the pure rules, like a unit
+test; an invariant that only the database enforces (a unique index) gets one slow test instead. Laws for `value-equality` and `enum-comparable`
 are in cats-kernel-laws (discipline).
 
 Which kind of test fits which construct: [docs/testing-strategy.md](docs/testing-strategy.md).
